@@ -25,6 +25,33 @@ const MCP_API = {
   createOrUpdate: `${BASE_URL}/mcp/createOrUpdate`,
   get: (id: string) => `${BASE_URL}/mcp/get/${id}`,
   delete: (id: string) => `${BASE_URL}/mcp/delete/${id}`,
+  healthCheck: (id: string) => `${BASE_URL}/mcp/health-check/${id}`,
+  healthCheckAll: `${BASE_URL}/mcp/health-check-all`,
+  tools: (id: string) => `${BASE_URL}/mcp/tools/${id}`,
+  groups: `${BASE_URL}/mcp/groups`,
+};
+
+// Workflow API endpoints
+const WORKFLOW_API = {
+  list: `${BASE_URL}/workflow/list`,
+  create: `${BASE_URL}/workflow/create`,
+  get: (id: string) => `${BASE_URL}/workflow/get/${id}`,
+  update: (id: string) => `${BASE_URL}/workflow/update/${id}`,
+  delete: (id: string) => `${BASE_URL}/workflow/delete/${id}`,
+  execute: (id: string) => `${BASE_URL}/workflow/execute/${id}`,
+  nodeTypes: `${BASE_URL}/workflow/node-types`,
+  executions: (id: string) => `${BASE_URL}/workflow/executions/${id}`,
+};
+
+// Model Provider API endpoints
+const MODEL_API = {
+  list: `${BASE_URL}/model/providers`,
+  create: `${BASE_URL}/model/provider`,
+  get: (id: string) => `${BASE_URL}/model/provider/${id}`,
+  update: (id: string) => `${BASE_URL}/model/provider/${id}`,
+  delete: (id: string) => `${BASE_URL}/model/provider/${id}`,
+  test: (id: string) => `${BASE_URL}/model/provider/${id}/test`,
+  availableModels: `${BASE_URL}/model/available-models`,
 };
 
 // Schedule API endpoints
@@ -113,6 +140,10 @@ export interface MCPServer {
   name: string;
   desc: string;
   host: string;
+  group?: string;
+  tags?: string[];
+  status?: 'running' | 'stopped' | 'error' | 'unknown';
+  tool_count?: number;
 }
 
 // Interface for ChatRecord
@@ -384,6 +415,50 @@ export const mcpAPI = {
       return true;
     }
   },
+
+  // Health check a single MCP server
+  healthCheck: async (id: string): Promise<{ status: string; message?: string }> => {
+    try {
+      const response = await axios.post(MCP_API.healthCheck(id));
+      return response.data;
+    } catch (error: any) {
+      console.error(`Error health checking MCP server ${id}:`, error);
+      return { status: 'error', message: error?.response?.data?.message || '健康检查失败' };
+    }
+  },
+
+  // Health check all MCP servers
+  healthCheckAll: async (): Promise<Array<{ server_id: string; status: string; message?: string }>> => {
+    try {
+      const response = await axios.post(MCP_API.healthCheckAll);
+      return response.data;
+    } catch (error) {
+      console.error('Error health checking all MCP servers:', error);
+      return [];
+    }
+  },
+
+  // Get tools for a specific MCP server
+  getServerTools: async (id: string): Promise<Array<{ name: string; description: string; input_schema?: Record<string, any> }>> => {
+    try {
+      const response = await axios.get(MCP_API.tools(id));
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching tools for MCP server ${id}:`, error);
+      return [];
+    }
+  },
+
+  // Get available groups
+  getGroups: async (): Promise<string[]> => {
+    try {
+      const response = await axios.get(MCP_API.groups);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching MCP groups:', error);
+      return [];
+    }
+  },
 };
 
 export const chatAPI = {
@@ -495,6 +570,145 @@ export const scheduleAPI = {
       // Fallback to mock behavior if API call fails
       console.warn('Falling back to mock behavior');
       return true;
+    }
+  },
+};
+
+// Workflow API functions
+export const workflowAPI = {
+  getWorkflows: async (): Promise<any[]> => {
+    try {
+      const response = await axios.get(WORKFLOW_API.list);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching workflows:', error);
+      return [];
+    }
+  },
+
+  getWorkflow: async (id: string): Promise<any | null> => {
+    try {
+      const response = await axios.get(WORKFLOW_API.get(id));
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching workflow ${id}:`, error);
+      return null;
+    }
+  },
+
+  createWorkflow: async (data: any): Promise<any> => {
+    const response = await axios.post(WORKFLOW_API.create, data);
+    return response.data;
+  },
+
+  updateWorkflow: async (id: string, data: any): Promise<any> => {
+    const response = await axios.put(WORKFLOW_API.update(id), data);
+    return response.data;
+  },
+
+  deleteWorkflow: async (id: string): Promise<boolean> => {
+    try {
+      await axios.delete(WORKFLOW_API.delete(id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting workflow ${id}:`, error);
+      return false;
+    }
+  },
+
+  executeWorkflow: (id: string, inputData: any): Promise<Response> => {
+    return fetch(WORKFLOW_API.execute(id), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      },
+      body: JSON.stringify(inputData),
+    });
+  },
+
+  getNodeTypes: async (): Promise<any[]> => {
+    try {
+      const response = await axios.get(WORKFLOW_API.nodeTypes);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching node types:', error);
+      return [];
+    }
+  },
+
+  getExecutions: async (id: string): Promise<any[]> => {
+    try {
+      const response = await axios.get(WORKFLOW_API.executions(id));
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching executions for workflow ${id}:`, error);
+      return [];
+    }
+  },
+};
+
+// Model Provider API functions
+export const modelAPI = {
+  getProviders: async (): Promise<any[]> => {
+    try {
+      const response = await axios.get(MODEL_API.list);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching model providers:', error);
+      return [];
+    }
+  },
+
+  getProvider: async (id: string): Promise<any | null> => {
+    try {
+      const response = await axios.get(MODEL_API.get(id));
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching model provider ${id}:`, error);
+      return null;
+    }
+  },
+
+  createProvider: async (data: any): Promise<any> => {
+    const response = await axios.post(MODEL_API.create, data);
+    return response.data;
+  },
+
+  updateProvider: async (id: string, data: any): Promise<any> => {
+    const response = await axios.put(MODEL_API.update(id), data);
+    return response.data;
+  },
+
+  deleteProvider: async (id: string): Promise<boolean> => {
+    try {
+      await axios.delete(MODEL_API.delete(id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting model provider ${id}:`, error);
+      return false;
+    }
+  },
+
+  testConnection: async (id: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const response = await axios.post(MODEL_API.test(id));
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.response?.data?.message || '连接测试失败',
+      };
+    }
+  },
+
+  getAvailableModels: async (): Promise<string[]> => {
+    try {
+      const response = await axios.get(MODEL_API.availableModels);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching available models:', error);
+      return [];
     }
   },
 };

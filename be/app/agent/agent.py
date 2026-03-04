@@ -1,6 +1,8 @@
 import boto3, uuid
 import importlib
 import json
+import logging
+from datetime import datetime
 
 from boto3.dynamodb.conditions import Attr
 from strands import Agent, tool
@@ -15,6 +17,8 @@ from ..utils.aws_config import get_aws_region
 from enum import Enum
 from typing import Optional, List
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 AgentType  = Enum("AgentType", ("plain", "orchestrator"))
 ModelProvider = Enum("ModelProvider", ("bedrock", "openai", "anthropic", "litellm", "ollama", "custom"))
@@ -112,6 +116,8 @@ class AgentPO(BaseModel):
     tools: List[AgentTool] = []
     envs: str = ""
     extras: Optional[dict] = None
+    created_at: str = ""
+    updated_at: str = ""
 
     def __repr__(self):
         return f"AgentPO(name={self.name}, display_name={self.display_name} description={self.description}, " \
@@ -190,6 +196,12 @@ class AgentPOService:
         if not isinstance(agent_po, AgentPO):
             raise TypeError("agent_po must be an instance of AgentPO")
 
+        # Auto-fill timestamps
+        now = datetime.utcnow().isoformat()
+        if not agent_po.created_at:
+            agent_po.created_at = now
+        agent_po.updated_at = now
+
         # write to DynamoDB
         table = self.dynamodb.Table(self.dynamodb_table_name)
         item = {
@@ -202,7 +214,9 @@ class AgentPOService:
             'model_id': agent_po.model_id,
             'sys_prompt': agent_po.sys_prompt,
             'tools': [tool.model_dump_json() for tool in agent_po.tools],  # Convert tools to JSON string
-            'envs': agent_po.envs
+            'envs': agent_po.envs,
+            'created_at': agent_po.created_at,
+            'updated_at': agent_po.updated_at,
         }
         
         # Add extras if it exists
@@ -293,6 +307,10 @@ class AgentPOService:
         """
         Get all available tools from the AgentPOService.
 
+        Includes built-in Strands tools, Agent-as-Tool entries, and MCP server tools.
+        MCP tools are enriched with ``group`` and ``status`` information.
+        Only tools from MCP servers in ``running`` status are returned.
+
         :return: A list of AgentTool objects.
         """
         tools = []
@@ -304,12 +322,100 @@ class AgentPOService:
             if agent.agent_type == AgentType.plain:
                 tools.append(AgentTool(name=agent.name, display_name=agent.name, category="Agent", desc=agent.description, type=AgentToolType.agent, agent_id=agent.id))
 
-        # Add MCP tools
+        # Add MCP tools — only from servers with status == "running"
         mcpService = MCPService()
         for mcp in mcpService.list_mcp_servers():
-            tools.append(AgentTool(name=mcp.name, display_name=mcp.name, category="Mcp", desc=mcp.desc, type=AgentToolType.mcp, mcp_server_url=mcp.host))
+            # 只返回 running 状态的 server 工具
+            server_status = getattr(mcp, "status", None) or "unknown"
+            if server_status != "running":
+                continue
+
+            server_group = getattr(mcp, "group", None) or "default"
+            tools.append(
+                AgentTool(
+                    name=mcp.name,
+                    display_name=mcp.name,
+                    category="Mcp",
+                    desc=mcp.desc,
+                    type=AgentToolType.mcp,
+                    mcp_server_url=mcp.host,
+                    extra={"group": server_group, "status": server_status},
+                )
+            )
         
         return tools
+
+    def _build_model(
+        self,
+        provider: ModelProvider,
+        model_id: str,
+        extras: Optional[dict] = None,
+        **kwargs,
+    ):
+        """
+        Build a model instance based on the provider type.
+
+        Centralises model construction logic to avoid duplication between
+        ``build_strands_agent()`` and ``agent_as_tool()``.
+
+        If the provider has a matching record in ``ModelProviderTable``, its
+        ``config`` will be merged (agent-level extras take precedence).
+
+        :param provider: The ModelProvider enum value.
+        :param model_id: The model identifier string.
+        :param extras: Optional provider-specific config (api_key, base_url, …).
+        :param kwargs: Extra Bedrock boto config overrides (max_attempts, connect_timeout, read_timeout).
+        :return: A model instance suitable for strands Agent.
+        """
+        # --- Attempt to enrich from ModelProviderTable ---
+        merged_extras = dict(extras or {})
+        try:
+            provider_table = self.dynamodb.Table("ModelProviderTable")
+            # Scan for matching provider type; prefer is_default or first match
+            resp = provider_table.scan(
+                FilterExpression=Attr("type").eq(provider.name)
+            )
+            items = resp.get("Items", [])
+            if items:
+                # Prefer the default provider if multiple exist
+                chosen = next((i for i in items if i.get("is_default")), items[0])
+                provider_config = chosen.get("config", {})
+                # Provider-level config is base; agent extras override
+                for k, v in provider_config.items():
+                    merged_extras.setdefault(k, v)
+                logger.info("Enriched model config from ModelProviderTable (provider=%s)", provider.name)
+        except Exception as exc:
+            # Table might not exist yet — that's fine, fall through
+            logger.debug("ModelProviderTable lookup skipped: %s", exc)
+
+        # --- Build model by provider ---
+        if provider == ModelProvider.openai:
+            from strands.models.openai import OpenAIModel
+
+            base_url = merged_extras.get("base_url")
+            api_key = merged_extras.get("api_key")
+
+            return OpenAIModel(
+                client_args={
+                    "api_key": api_key,
+                    "base_url": base_url,
+                },
+                model_id=model_id,
+            )
+
+        # Default: Bedrock (covers bedrock and any unsupported provider)
+        boto_config = BotocoreConfig(
+            retries={
+                "max_attempts": kwargs.get("max_attempts", 10),
+                "mode": "standard",
+            },
+            connect_timeout=kwargs.get("connect_timeout", 10),
+            read_timeout=kwargs.get("read_timeout", 900),
+        )
+        return BedrockModel(
+            model_id=model_id,
+            boto_client_config=boto_config,
+        )
 
     def build_strands_agent(self, agent: AgentPO, **kwargs) -> Agent:
         """
@@ -366,49 +472,13 @@ class AgentPOService:
             else:
                 print(f"Unsupported tool type: {t.type}")
         
-
-        # Choose the appropriate model based on the provider
-        if agent.model_provider == ModelProvider.bedrock:
-            boto_config = BotocoreConfig(
-                retries={"max_attempts": kwargs['max_attempts'] if 'max_attempts' in kwargs else 10, "mode": "standard"},
-                connect_timeout=kwargs['connect_timeout'] if 'connect_timeout' in kwargs else 10,
-                read_timeout=kwargs['read_timeout'] if 'read_timeout' in kwargs else 900
-            )
-
-            model = BedrockModel(
-                model_id=agent.model_id,
-                boto_client_config=boto_config,
-            )
-        elif agent.model_provider == ModelProvider.openai:
-            # For OpenAI, use the extras field to get base_url and api_key
-            from strands.models.openai import OpenAIModel
-            
-            base_url = None
-            api_key = None
-            
-            if agent.extras:
-                base_url = agent.extras.get('base_url')
-                api_key = agent.extras.get('api_key')
-            
-            model = OpenAIModel(
-                client_args={
-                    "api_key": api_key,
-                    "base_url": base_url
-                },
-                model_id=agent.model_id,
-            )
-        else:
-            # Default to Bedrock for now
-            boto_config = BotocoreConfig(
-                retries={"max_attempts": kwargs['max_attempts'] if 'max_attempts' in kwargs else 10, "mode": "standard"},
-                connect_timeout=kwargs['connect_timeout'] if 'connect_timeout' in kwargs else 10,
-                read_timeout=kwargs['read_timeout'] if 'read_timeout' in kwargs else 900
-            )
-
-            model = BedrockModel(
-                model_id=agent.model_id,
-                boto_client_config=boto_config,
-            )
+        # Build model via the extracted helper (includes ModelProviderTable enrichment)
+        model = self._build_model(
+            provider=agent.model_provider,
+            model_id=agent.model_id,
+            extras=agent.extras,
+            **kwargs,
+        )
 
         return Agent(
             system_prompt=agent.sys_prompt,
@@ -447,7 +517,9 @@ class AgentPOService:
             sys_prompt=item['sys_prompt'],
             tools=[json_to_agent_tool(json.loads(tool)) for tool in item['tools'] ],
             envs=item.get('envs', ''),
-            extras=item.get('extras')
+            extras=item.get('extras'),
+            created_at=item.get('created_at', ''),
+            updated_at=item.get('updated_at', ''),
         )
     
 

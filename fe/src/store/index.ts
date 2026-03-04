@@ -6,6 +6,8 @@ import { formatMessageEvent, formatToHTML } from '../utils/agentEventFormatter';
 
 export { useAgentStore } from './agentStore';
 export { useMCPStore } from './mcpStore';
+export { useWorkflowStore } from './workflowStore';
+export { useModelStore } from './modelStore';
 
 interface ChatState {
   // Conversations

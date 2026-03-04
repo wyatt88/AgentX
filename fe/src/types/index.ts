@@ -180,6 +180,121 @@ export type AgentEvent =
   | LifecycleEvent 
   | ReasoningEvent;
 
+// Workflow types
+export interface WorkflowNode {
+  id: string;
+  type: string;
+  position: { x: number; y: number };
+  data: Record<string, any>;
+}
+
+export interface WorkflowEdge {
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+}
+
+export interface WorkflowDefinition {
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+}
+
+export interface Workflow {
+  id: string;
+  name: string;
+  description: string;
+  status: 'draft' | 'published' | 'archived';
+  definition: WorkflowDefinition;
+  trigger_type: string;
+  trigger_config: any;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateWorkflowReq {
+  name: string;
+  description: string;
+  definition?: WorkflowDefinition;
+  trigger_type?: string;
+  trigger_config?: any;
+}
+
+export interface UpdateWorkflowReq {
+  name?: string;
+  description?: string;
+  status?: 'draft' | 'published' | 'archived';
+  definition?: WorkflowDefinition;
+  trigger_type?: string;
+  trigger_config?: any;
+}
+
+// Model Provider types
+export interface ModelProvider {
+  id: string;
+  name: string;
+  type: string;
+  config: Record<string, any>;
+  models: string[];
+  is_default: boolean;
+  status: string;
+}
+
+export interface CreateModelProviderReq {
+  name: string;
+  type: string;
+  config: Record<string, any>;
+  models: string[];
+  is_default?: boolean;
+}
+
+export interface UpdateModelProviderReq {
+  name?: string;
+  type?: string;
+  config?: Record<string, any>;
+  models?: string[];
+  is_default?: boolean;
+}
+
+// MCP Server extended types
+export interface MCPServerTool {
+  name: string;
+  description: string;
+  input_schema?: Record<string, any>;
+}
+
+export interface MCPHealthCheckResult {
+  server_id: string;
+  status: 'running' | 'stopped' | 'error';
+  message?: string;
+  checked_at: string;
+}
+
+// Workflow execution types
+export type WorkflowExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+
+export interface WorkflowNodeExecution {
+  node_id: string;
+  node_type: string;
+  status: WorkflowExecutionStatus;
+  started_at?: string;
+  completed_at?: string;
+  output?: Record<string, any>;
+  error?: string;
+}
+
+export interface WorkflowExecution {
+  id: string;
+  workflow_id: string;
+  status: WorkflowExecutionStatus;
+  input_data?: Record<string, any>;
+  output_data?: Record<string, any>;
+  node_executions: WorkflowNodeExecution[];
+  started_at: string;
+  completed_at?: string;
+  error?: string;
+}
+
 // Helper function to determine event type
 export const getEventType = (event: AgentEvent): 'text' | 'tool' | 'event' | 'message' | 'init' | 'lifecycle' | 'reasoning' => {
   if ('data' in event) return 'text';

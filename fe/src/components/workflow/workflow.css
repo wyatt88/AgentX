@@ -1,0 +1,432 @@
+/* ==================== Workflow Node Base Styles ==================== */
+
+.workflow-node {
+  background: #fff;
+  border: 2px solid #e8e8e8;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.workflow-node.selected {
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
+}
+
+/* ==================== Start Node ==================== */
+
+.start-node {
+  border-radius: 20px;
+  padding: 10px 20px;
+  min-width: 120px;
+  text-align: center;
+}
+
+.start-node.selected {
+  border-color: #52c41a;
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2);
+}
+
+.start-node .node-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.start-node .node-icon {
+  color: #52c41a;
+  font-size: 18px;
+}
+
+.start-node .node-label {
+  font-weight: 600;
+  color: #52c41a;
+  font-size: 14px;
+}
+
+/* ==================== Agent Node ==================== */
+
+.agent-node {
+  border-radius: 8px;
+  padding: 0;
+  min-width: 180;
+  overflow: hidden;
+}
+
+.agent-node.selected {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.agent-node .node-header {
+  background: #1890ff;
+  color: #fff;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.agent-node .node-body {
+  padding: 8px 12px;
+}
+
+.agent-node .node-body .node-title {
+  font-size: 13px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-node .node-body .node-subtitle {
+  font-size: 11px;
+  color: #999;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==================== Condition Node ==================== */
+
+.condition-node-wrapper {
+  position: relative;
+  width: 160px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.condition-node-diamond {
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  background: #fff;
+  border: 2px solid #e8e8e8;
+  border-radius: 8px;
+  transform: rotate(45deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+.condition-node-wrapper.selected .condition-node-diamond {
+  border-color: #faad14;
+  box-shadow: 0 0 0 2px rgba(250, 173, 20, 0.2);
+}
+
+.condition-node-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  pointer-events: none;
+}
+
+.condition-node-content .node-icon {
+  color: #faad14;
+  font-size: 18px;
+}
+
+.condition-node-content .node-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #faad14;
+  margin-top: 2px;
+}
+
+.condition-node-content .node-expr {
+  font-size: 10px;
+  color: #666;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* ==================== Code Node ==================== */
+
+.code-node {
+  border-radius: 8px;
+  padding: 0;
+  min-width: 180px;
+  overflow: hidden;
+}
+
+.code-node.selected {
+  border-color: #722ed1;
+  box-shadow: 0 0 0 2px rgba(114, 46, 209, 0.2);
+}
+
+.code-node .node-header {
+  background: #722ed1;
+  color: #fff;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.code-node .node-header .lang-badge {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.25);
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.code-node .node-body {
+  padding: 8px 12px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #666;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 48px;
+  line-height: 16px;
+}
+
+/* ==================== End Node ==================== */
+
+.end-node {
+  border-radius: 20px;
+  padding: 10px 20px;
+  min-width: 120px;
+  text-align: center;
+}
+
+.end-node.selected {
+  border-color: #ff4d4f;
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+}
+
+.end-node .node-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.end-node .node-icon {
+  color: #ff4d4f;
+  font-size: 18px;
+}
+
+.end-node .node-label {
+  font-weight: 600;
+  color: #ff4d4f;
+  font-size: 14px;
+}
+
+/* ==================== Handle Styles ==================== */
+
+.workflow-node .react-flow__handle,
+.condition-node-wrapper .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+}
+
+.start-node .react-flow__handle {
+  background: #52c41a;
+}
+
+.agent-node .react-flow__handle {
+  background: #1890ff;
+}
+
+.condition-node-wrapper .react-flow__handle[data-handleid="true"] {
+  background: #52c41a;
+}
+
+.condition-node-wrapper .react-flow__handle[data-handleid="false"] {
+  background: #ff4d4f;
+}
+
+.condition-node-wrapper .react-flow__handle.react-flow__handle-left {
+  background: #faad14;
+}
+
+.code-node .react-flow__handle {
+  background: #722ed1;
+}
+
+.end-node .react-flow__handle {
+  background: #ff4d4f;
+}
+
+/* ==================== Node Panel ==================== */
+
+.node-panel {
+  width: 200px;
+  border-right: 1px solid #f0f0f0;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.node-panel-title {
+  padding: 12px 16px 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.node-panel-list {
+  flex: 1;
+  overflow: auto;
+  padding: 0 12px 12px;
+}
+
+.node-panel-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  cursor: grab;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.node-panel-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.node-panel-item:active {
+  cursor: grabbing;
+}
+
+.node-panel-item-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.node-panel-item-label {
+  font-weight: 500;
+  font-size: 13px;
+  color: #333;
+}
+
+/* ==================== Property Panel ==================== */
+
+.property-panel {
+  width: 300px;
+  border-left: 1px solid #f0f0f0;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.property-panel-header {
+  padding: 12px 16px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.property-panel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.property-panel-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.property-panel-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0 16px 16px;
+}
+
+.property-panel-empty {
+  width: 300px;
+  border-left: 1px solid #f0f0f0;
+  background: #fafafa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* ==================== Canvas Top Toolbar ==================== */
+
+.workflow-toolbar {
+  height: 48px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.workflow-toolbar .workflow-name-input {
+  font-weight: 600;
+  font-size: 15px;
+  max-width: 300px;
+}
+
+/* ==================== Canvas Layout ==================== */
+
+.workflow-canvas-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.workflow-canvas-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.workflow-canvas-center {
+  flex: 1;
+  position: relative;
+}
+
+/* ==================== Edge Styles ==================== */
+
+.react-flow__edge-path {
+  stroke: #999;
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #1890ff;
+  stroke-width: 2.5;
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 5;
+  animation: react-flow-edge-dash 0.5s linear infinite;
+}
+
+@keyframes react-flow-edge-dash {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
