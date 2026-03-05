@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentx-backend
+  namespace: agentx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agentx-backend
+  template:
+    metadata:
+      labels:
+        app: agentx-backend
+    spec:
+      serviceAccountName: agentx-backend
+      containers:
+      - name: backend
+        image: 678299176754.dkr.ecr.us-east-1.amazonaws.com/agentx/be:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: APP_ENV
+          value: "production"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"

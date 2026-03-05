@@ -1,35 +1,26 @@
 # Build stage
 FROM oven/bun:latest AS build
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
 COPY package.json bun.lockb ./
 
-# Install dependencies
-RUN bun install --frozen-lockfile
+# Install without frozen lockfile due to duplicate dep entries
+RUN bun install
 
-# Copy all files
 COPY . .
 
-# Build the application
 RUN bun run build
 
 # Production stage
 FROM nginx:stable-alpine
 
-# Copy built files from build stage to nginx serve directory
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy custom nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose port
 EXPOSE 80
 
-# Modify nginx keepalive_timeout to 600
 RUN sed -i 's/keepalive_timeout[[:space:]]*[0-9]\+;/keepalive_timeout 600;/g' /etc/nginx/nginx.conf
 
-# Start nginx
 CMD ["nginx", "-g", "daemon off;"]

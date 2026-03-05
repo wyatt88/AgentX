@@ -6,17 +6,17 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir uv
 
-# Copy project files
-COPY pyproject.toml README.md ./
-COPY app/ ./app/
+# Copy dependency files first (for layer caching)
+COPY pyproject.toml uv.lock README.md ./
 
 # Install dependencies
-# RUN pip install --no-cache-dir .
-RUN uv sync
+RUN uv sync --no-dev
+
+# Copy application code
+COPY app/ ./app/
+COPY scripts/ ./scripts/
 
 # Expose port
 EXPOSE 8000
 
-# Command to run the application
-# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--loop", "asyncio"]
 CMD ["/app/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--loop", "asyncio"]

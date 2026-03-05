@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agentx-backend
+  namespace: agentx
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::678299176754:role/AgentX-Backend

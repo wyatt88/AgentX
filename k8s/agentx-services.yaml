@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentx-backend
+  namespace: agentx
+spec:
+  type: ClusterIP
+  selector:
+    app: agentx-backend
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentx-frontend
+  namespace: agentx
+spec:
+  type: ClusterIP
+  selector:
+    app: agentx-frontend
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP

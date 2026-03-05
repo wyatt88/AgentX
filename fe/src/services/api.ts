@@ -453,7 +453,13 @@ export const mcpAPI = {
   getGroups: async (): Promise<string[]> => {
     try {
       const response = await axios.get(MCP_API.groups);
-      return response.data;
+      // Backend returns {"groups": {"groupName": [servers...]}}
+      // Extract group names as string array
+      const data = response.data;
+      if (data && data.groups) {
+        return Object.keys(data.groups);
+      }
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error('Error fetching MCP groups:', error);
       return [];
